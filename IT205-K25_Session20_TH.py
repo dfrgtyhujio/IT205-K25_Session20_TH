@@ -1,54 +1,46 @@
+import logging
+
+logging.basicConfig(
+    filename="arena_tickets.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 ticket_db = [
-    {
-        "ticket_id": "T01",
-        "buyer_name": "Nguyen Van A",
-        "price": 500.0,
-        "status": "Booked",
-        "seat": ("A", 1)
-    },
-    {
-        "ticket_id": "T02",
-        "buyer_name": "Tran Thi B",
-        "price": 300.0,
-        "status": "Cancelled",
-        "seat": ("B", 5)
-    },
-    {
-        "ticket_id": "T03",
-        "buyer_name": "Le Van C",
-        "price": 500.0,
-        "status": "Booked",
-        "seat": ("A", 2)
-    }
+    {"ticket_id": "T01", "buyer_name": "Nguyen Van A", "price": 500.0, "status": "Booked", "seat": ("A", 1)},
+    {"ticket_id": "T02", "buyer_name": "Tran Thi B", "price": 300.0, "status": "Cancelled", "seat": ("B", 5)},
+    {"ticket_id": "T03", "buyer_name": "Le Van C", "price": 500.0, "status": "Booked", "seat": ("A", 2)}
 ]
 
 
 def display_tickets(tickets):
+    print("\n--- DANH SÁCH VÉ ---")
+
     if not tickets:
         print("Hiện chưa có vé nào trong hệ thống.")
         return
 
-    print("\n--- DANH SÁCH VÉ ---")
     print("Mã Vé | Tên Khách Hàng | Giá Vé | Chỗ Ngồi | Trạng Thái")
     print("-" * 70)
 
     for ticket in tickets:
         try:
             seat = f"{ticket['seat'][0]}-{ticket['seat'][1]}"
-
             status = ticket["status"]
+
             if status == "Cancelled":
                 status += " [ĐÃ HỦY]"
 
-            print(f"{ticket['ticket_id']:<5} | {ticket['buyer_name']:<18} | {ticket['price']:<7} | {seat:<8} | {status}")
+            print(f"{ticket['ticket_id']:<6} | {ticket['buyer_name']:<18} | {ticket['price']:<7} | {seat:<8} | {status}")
 
-        except KeyError:
+        except KeyError as error:
             print("Lỗi: Một vé đang bị thiếu dữ liệu, vui lòng kiểm tra lại.")
+            logging.error(f"Missing key while displaying ticket: {error}")
 
-    print("-" * 70)
+    logging.info("User viewed ticket list.")
 
 
-def input_price():
+def get_valid_price():
     while True:
         try:
             price = float(input("Nhập giá vé: "))
@@ -61,9 +53,10 @@ def input_price():
 
         except ValueError:
             print("Giá vé phải là số. Vui lòng nhập lại.")
+            logging.warning("Invalid price input while booking ticket")
 
 
-def input_seat_number(message):
+def get_valid_seat_number(message):
     while True:
         try:
             seat_number = int(input(message))
@@ -81,65 +74,58 @@ def input_seat_number(message):
 def book_ticket(tickets):
     print("\n--- ĐẶT VÉ MỚI ---")
 
-    ticket_id = input("Nhập mã vé: ").strip()
+    ticket_id = input("Nhập mã vé: ").strip().upper()
 
     for ticket in tickets:
         if ticket["ticket_id"] == ticket_id:
             print(f"Lỗi: Mã vé {ticket_id} đã tồn tại.")
+            logging.warning(f"Duplicate ticket ID entered: {ticket_id}")
             return
 
     buyer_name = input("Nhập tên khách hàng: ").strip()
+    price = get_valid_price()
+    seat_row = input("Nhập khu vực ghế: ").strip().upper()
+    seat_number = get_valid_seat_number("Nhập số ghế: ")
 
-    price = input_price()
-
-    area = input("Nhập khu vực ghế: ").strip().upper()
-
-    seat_number = input_seat_number("Nhập số ghế: ")
-
-    new_ticket = {
+    tickets.append({
         "ticket_id": ticket_id,
         "buyer_name": buyer_name,
         "price": price,
         "status": "Booked",
-        "seat": (area, seat_number)
-    }
-
-    tickets.append(new_ticket)
+        "seat": (seat_row, seat_number)
+    })
 
     print(f"Thành công: Đã đặt vé {ticket_id} cho khách hàng {buyer_name}.")
+    logging.info(f"Booked new ticket {ticket_id} for {buyer_name}")
 
 
 def change_seat(tickets):
     print("\n--- ĐỔI CHỖ NGỒI ---")
 
-    ticket_id = input("Nhập mã vé cần đổi chỗ: ").strip()
+    ticket_id = input("Nhập mã vé cần đổi chỗ: ").strip().upper()
 
     for ticket in tickets:
-
         if ticket["ticket_id"] == ticket_id:
 
-            new_area = input("Nhập khu vực ghế mới: ").strip().upper()
+            new_row = input("Nhập khu vực ghế mới: ").strip().upper()
+            new_number = get_valid_seat_number("Nhập số ghế mới: ")
 
-            new_seat = input_seat_number("Nhập số ghế mới: ")
+            ticket["seat"] = (new_row, new_number)
 
-            ticket["seat"] = (
-                new_area,
-                new_seat
-            )
-
-            print(f"Thành công: Đã đổi chỗ vé {ticket_id} sang {new_area}-{new_seat}.")
+            print(f"Thành công: Đã đổi chỗ vé {ticket_id} sang {new_row}-{new_number}.")
+            logging.info(f"Seat changed for ticket {ticket_id} to {new_row}-{new_number}")
             return
 
     print(f"Không tìm thấy vé mang mã {ticket_id}.")
+    logging.warning(f"Change seat failed - Ticket {ticket_id} not found")
 
 
 def cancel_ticket(tickets):
     print("\n--- HỦY VÉ ---")
 
-    ticket_id = input("Nhập mã vé cần hủy: ").strip()
+    ticket_id = input("Nhập mã vé cần hủy: ").strip().upper()
 
     for ticket in tickets:
-
         if ticket["ticket_id"] == ticket_id:
 
             if ticket["status"] == "Cancelled":
@@ -149,50 +135,57 @@ def cancel_ticket(tickets):
             ticket["status"] = "Cancelled"
 
             print(f"Thành công: Vé {ticket_id} đã được hủy.")
+            logging.warning(f"Ticket {ticket_id} has been cancelled.")
             return
 
     print(f"Không tìm thấy vé mang mã {ticket_id}.")
+    logging.warning(f"Cancel ticket failed - Ticket {ticket_id} not found")
 
 
 def calculate_revenue(tickets):
     print("\n--- BÁO CÁO DOANH THU ---")
 
-    revenue = 0
     booked_count = 0
     cancelled_count = 0
+    total_revenue = 0.0
 
-    for ticket in tickets:
-
-        try:
+    try:
+        for ticket in tickets:
             if ticket["status"] == "Booked":
-                revenue += ticket["price"]
                 booked_count += 1
-            else:
+                total_revenue += ticket["price"]
+
+            elif ticket["status"] == "Cancelled":
                 cancelled_count += 1
 
-        except KeyError:
-            print("Lỗi: Một vé đang bị thiếu dữ liệu doanh thu.")
+    except KeyError as error:
+        print("Lỗi: Một vé đang bị thiếu dữ liệu doanh thu.")
+        logging.error(f"Missing key while calculating revenue: {error}")
+        total_revenue = 0.0
 
     print(f"Tổng số vé đã đặt: {booked_count}")
     print(f"Tổng số vé đã hủy: {cancelled_count}")
-    print(f"Tổng doanh thu hợp lệ: {revenue}")
+    print(f"Tổng doanh thu hợp lệ: {total_revenue}")
+
+    logging.info(f"Revenue report generated. Total: {total_revenue}")
+
+
+def display_menu():
+    print("\n=== HỆ THỐNG QUẢN LÝ VÉ RIKKEI ESPORTS ===")
+    print("1. Xem danh sách vé đã bán")
+    print("2. Đặt vé mới")
+    print("3. Đổi chỗ ngồi")
+    print("4. Hủy vé")
+    print("5. Báo cáo doanh thu")
+    print("6. Thoát chương trình")
+    print("========================================")
 
 
 def main():
     while True:
-        print("\n=== HỆ THỐNG QUẢN LÝ VÉ RIKKEI ESPORTS ===")
-        print("1. Xem danh sách vé đã bán")
-        print("2. Đặt vé mới")
-        print("3. Đổi chỗ ngồi")
-        print("4. Hủy vé")
-        print("5. Báo cáo doanh thu")
-        print("6. Thoát chương trình")
-        print("========================================")
+        display_menu()
 
-
-        choice = input(
-            "Chọn chức năng (1-6): "
-        ).strip()
+        choice = input("Chọn chức năng (1-6): ").strip()
 
         if choice == "1":
             display_tickets(ticket_db)
@@ -210,11 +203,12 @@ def main():
             calculate_revenue(ticket_db)
 
         elif choice == "6":
-            print("Cảm ơn bạn đã sử dụng hệ thống")
+            print("Cảm ơn bạn đã sử dụng hệ thống quản lý vé RIKKEI Esports.")
+            logging.info("Ticket management system closed.")
             break
 
         else:
-            print("Lựa chọn không hợp lệ. Vui lòng chọn từ 1 đến 6.")
+            print("Lựa chọn không hợp lệ.")
 
 
 if __name__ == "__main__":
